@@ -1,0 +1,110 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Dashboard Template for Bootstrap</title>
+
+  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link href="index.css" rel="stylesheet">
+</head>
+
+<body>
+
+
+<header>
+  <div class="navbar navbar-dark bg-dark box-shadow">
+    <div class="container d-flex justify-content-between">
+      <span class="navbar-brand d-flex align-items-center">
+        <strong>公共交通发展报告</strong>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main role="main">
+
+  <section class="jumbotron text-center">
+    <div class="container">
+      <h1 class="jumbotron-heading">公共交通数据可视化</h1>
+      <p class="lead">呈现地区与地区、时间与时间之间的变化关系<br>以及公共交通发展与经济发展之间的联系</p>
+    </div>
+  </section>
+
+  <div class="album py-5">
+    <div class="container">
+      <div id="view1">
+
+      </div>
+      <h2 class="lead">与经济指标的对比</h2>
+      <div id="view2">
+
+      </div>
+
+      <form>
+        <div class="form-group row">
+          <label for="time" class="col-sm-2 col-form-label">Time</label>
+          <div class="col-sm-8">
+            <input type="range" class="form-control form-control-range" id="time" min="2007" max="2016" step="1" value="2016">
+          </div>
+          <div class="col-sm-2" id="timeDisplayer">2016</div>
+        </div>
+        <div class="form-group row">
+          <label for="category" class="col-sm-2 col-form-label">Category</label>
+          <div class="col-sm-10">
+            <select class="form-control" id="category">
+              <option value="throughputTot">公共交通车辆运营数(辆)</option>
+              <option value="throughputBus">公共汽电车运营数(辆)</option>
+              <option value="throughputMetro">轨道交通运营数(辆)</option>
+              <option value="lengthTot">运营线路总长度(公里)</option>
+              <option value="lengthBus">公共汽电车运营线路总长度(公里)</option>
+              <option value="lengthMetro">轨道交通运营线路总长度(公里)</option>
+              <option value="peopleTot" selected>公共交通客运总量(万人次)</option>
+              <option value="peopleBus">公共汽电车客运量(万人次)</option>
+              <option value="peopleMetro">轨道交通客运量(万人次)</option>
+              <option value="taxi">出租汽车(辆)</option>
+            </select>
+          </div>
+        </div>
+      </form>
+
+
+      <div class="row">
+        <div class="col-md-6">
+          <div id="view3">
+
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div id="view4">
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="text-muted">
+  <div class="container">
+    <p>数据来源：国家统计局</p>
+    <p>2018 年 4 月</p>
+  </div>
+</footer>
+
+
+<script src="node_modules/jquery/dist/jquery.min.js"></script>
+<!--<script src="node_modules/popper.js/dist/popper.min.js"></script>-->
+<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="node_modules/d3/dist/d3.js"></script>
+<script src="china.js"></script>
+<script src="index.js"></script>
+
+</body>
+</html>
