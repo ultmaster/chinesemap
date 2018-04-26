@@ -17,29 +17,65 @@ let categoryObject = {};
 $("#category").find("option").each(function () {
   categoryObject[$(this).val()] = $(this).html();
 });
+let data = {};
 for (let c in categoryObject)
   d3.csv("data/" + c + ".csv")
-    .row(function(d) { return d; })
-    .get(function(error, rows) {
-      console.log(rows);
+    .then(function (d) {
+      data[c] = d;
+      if (Object.keys(data).length >= 11) {
+        init();
+      }
     });
+d3.csv("data/gdp.csv")
+  .then(function (d) {
+    data["gdp"] = d;
+    if (Object.keys(data).length >= 11) {
+      init();
+    }
+  });
 
 let settings = {
   "time": 2016,
-  "region": "上海市",
+  "region": "上海",
   "typeValue": "peopleTot",
 };
 // set default
 $("#category, #time").on("change", function () {
-  settings.region = $("#category").val();
+  settings.typeValue = $("#category").val();
   settings.time = $("#time").val();
   $("#timeDisplayer").html(settings.time);
-  console.log(settings);
+  updateSettings();
+  console.log("settings");
 });
+
+function getDataOnTypeYear(type, year) {
+  let d = data[type];
+  let ret = {};
+  for (let i = 0; i < d.length; ++i)
+    ret[d[i].region] = parseFloat(d[i]["" + year]);
+  return ret;
+}
+
+function getDataValuesOnType(type) {
+  let d = data[type];
+  for (let i = 0; i < d.length; ++i)
+    for (let v of d[i])
+
+    ret[d[i].region] = parseFloat(d[i]["" + year]);
+}
+
+function init() {
+  renderMap();
+}
+
+function updateSettings() {
+  renderMap();
+}
 
 function renderMap() {
   let width = chineseMapView.width();
   let height = chineseMapView.height();
+  d3.select("#view1").selectAll("svg").remove();
   let svg = d3.select("#view1").append("svg")
       .attr("width", width).attr("height", height);
 
@@ -48,8 +84,18 @@ function renderMap() {
     .scale(width * 0.7)
     .translate([width / 2, height / 2 + height / 6]);
   let path = d3.geoPath().projection(projection);
+  let densityData = getDataOnTypeYear(settings.typeValue, settings.time);
+  let densityValues = Object.values(densityData);
+  console.log(densityValues);
 
-  let color = d3.scaleOrdinal().range(d3.schemeReds);
+  let color = d3.scaleSequential(d3.interpolateReds);
+  color.domain(d3.extent(densityValues));
+
+  function getRegionColor(d) {
+    if (densityData.hasOwnProperty(d.properties.name) && densityData[d.properties.name])
+      return color(densityData[d.properties.name]);
+    return "white";
+  }
 
   svg.selectAll("path")
     .data(china.features)
@@ -57,9 +103,7 @@ function renderMap() {
     .append("path")
     .attr("stroke", "#000")
     .attr("stroke-width", 1)
-    .attr("fill", function (d, i) {
-      return color(i);
-    })
+    .attr("fill", getRegionColor)
     .attr("d", path)   //使用地理路径生成器
     .on("mouseover", function (d, i) {
       console.log(d);
@@ -68,11 +112,9 @@ function renderMap() {
     })
     .on("mouseout", function (d, i) {
       d3.select(this)
-        .attr("fill", color(i));
+        .attr("fill", getRegionColor(d));
     });
 }
-
-renderMap();
 
 // var dispatch = d3.dispatch('hideTooltip', 'iTooltip');
 // var container;
