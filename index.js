@@ -2,8 +2,7 @@ let chineseMapView = $('#view1');
 chineseMapView.height(chineseMapView.width() * 0.6);
 
 let economyView = $('#view2');
-economyView.height(economyView.width() * 0.3);
-economyView.css("backgroundColor", "green");
+economyView.height(economyView.width() * 0.2);
 
 let pieChartView = $('#view3');
 pieChartView.height(pieChartView.width() * 1);
@@ -13,10 +12,24 @@ let lineChartView = $('#view4');
 lineChartView.height(lineChartView.width() * 1);
 lineChartView.css("backgroundColor", "red");
 
+const colorScheme = [
+  d3.interpolateOrRd,
+  d3.interpolateBuGn,
+  d3.interpolateBuPu,
+  d3.interpolateGnBu,
+  d3.interpolatePuRd,
+  d3.interpolatePuBuGn,
+  d3.interpolateRdPu,
+  d3.interpolateYlGnBu,
+  d3.interpolateYlGn,
+  d3.interpolateYlOrRd
+];
+
 let categoryObject = {};
 $("#category").find("option").each(function () {
   categoryObject[$(this).val()] = $(this).html();
 });
+const colorSchemeScale = d3.scaleOrdinal(colorScheme).domain(Object.keys(categoryObject));
 let data = {};
 for (let c in categoryObject)
   d3.csv("data/" + c + ".csv")
@@ -40,36 +53,46 @@ let settings = {
   "typeValue": "peopleTot",
 };
 // set default
-$("#category, #time").on("change", function () {
+function setDefault() {
   settings.typeValue = $("#category").val();
   settings.time = $("#time").val();
   $("#timeDisplayer").html(settings.time);
   updateSettings();
-  console.log("settings");
-});
+}
+$("#category, #time").on("input", setDefault);
 
 function getDataOnTypeYear(type, year) {
   let d = data[type];
   let ret = {};
-  for (let i = 0; i < d.length; ++i)
-    ret[d[i].region] = parseFloat(d[i]["" + year]);
+  for (let i = 0; i < d.length; ++i) {
+    if (d[i].hasOwnProperty("region"))
+      ret[d[i].region] = parseFloat(d[i]["" + year]);
+  }
   return ret;
 }
 
 function getDataValuesOnType(type) {
   let d = data[type];
-  for (let i = 0; i < d.length; ++i)
-    for (let v of d[i])
-
-    ret[d[i].region] = parseFloat(d[i]["" + year]);
+  let ret = [];
+  for (let i = 0; i < d.length; ++i) {
+    if (!d[i].hasOwnProperty("region"))
+      continue;
+    for (let k in d[i]) {
+      let v = d[i][k];
+      if (v !== "") ret.push(parseFloat(v));
+    }
+  }
+  return ret;
 }
 
 function init() {
   renderMap();
+  renderEconomy();
 }
 
 function updateSettings() {
   renderMap();
+  renderEconomy();
 }
 
 function renderMap() {
@@ -85,10 +108,10 @@ function renderMap() {
     .translate([width / 2, height / 2 + height / 6]);
   let path = d3.geoPath().projection(projection);
   let densityData = getDataOnTypeYear(settings.typeValue, settings.time);
-  let densityValues = Object.values(densityData);
-  console.log(densityValues);
+  let densityValues = getDataValuesOnType(settings.typeValue);
+  densityValues.push(0);
 
-  let color = d3.scaleSequential(d3.interpolateReds);
+  let color = d3.scaleSequential(colorSchemeScale(settings.typeValue));
   color.domain(d3.extent(densityValues));
 
   function getRegionColor(d) {
@@ -102,9 +125,9 @@ function renderMap() {
     .enter()
     .append("path")
     .attr("stroke", "#000")
-    .attr("stroke-width", 1)
+    .attr("stroke-width", 0.5)
     .attr("fill", getRegionColor)
-    .attr("d", path)   //使用地理路径生成器
+    .attr("d", path)
     .on("mouseover", function (d, i) {
       console.log(d);
       d3.select(this)
@@ -114,6 +137,58 @@ function renderMap() {
       d3.select(this)
         .attr("fill", getRegionColor(d));
     });
+}
+
+function renderEconomy() {
+  let width = economyView.width();
+  let height = economyView.height();
+  d3.select("#view2").selectAll("svg").remove();
+  let svg = d3.select("#view2").append("svg")
+    .attr("width", width).attr("height", height);
+  let g = svg.append("g");
+
+  let x = d3.scaleBand()
+    .rangeRound([0, width])
+    .paddingInner(0.05)
+    .align(0.1);
+
+  let y1Max = height / 2 - 1;
+  let y1 = d3.scaleLinear().rangeRound([y1Max, 0]);
+  let y2 = d3.scaleLinear().rangeRound([0, height / 2]);
+  let color = colorSchemeScale(settings.typeValue);
+
+  let dataset1 = getDataOnTypeYear(settings.typeValue, settings.time);
+  let dataset2 = getDataOnTypeYear("gdp", settings.time);
+  let data = [];
+  for (let k in dataset1)
+    data.push({"region": k, "val": dataset1[k] ? parseFloat(dataset1[k]) : 0, "gdp": dataset2[k] ? parseFloat(dataset2[k]) : 0});
+  data.sort(function (a, b) { return b.gdp - a.gdp; });
+  x.domain(data.map(function (d) { return d.region; }));
+  y1.domain([0, d3.max(data, function (d) { return d.val; })]);
+  y2.domain([0, d3.max(data, function (d) { return d.gdp; })]);
+
+  g.append("g").selectAll("rect")
+    .data(data)
+    .enter().append("rect")
+    .attr("fill", color(0.4))
+    .attr("x", function (d) { return x(d.region); })
+    .attr("y", function (d) { return y1(d.val); })
+    .attr("height", function (d) { return y1Max - y1(d.val); })
+    .attr("width", x.bandwidth());
+
+  g.append("g").selectAll("rect")
+    .data(data)
+    .enter().append("rect")
+    .attr("fill", color(0.7))
+    .attr("x", function (d) { return x(d.region); })
+    .attr("y", height / 2)
+    .attr("height", function (d) { return y2(d.gdp); })
+    .attr("width", x.bandwidth());
+
+  g.append("text").attr("text-anchor", "end").attr("x", width * 0.95).attr("y", height * 0.8).text("GDP")
+    .style("font-size", (height / 5) + "px").attr("fill", "#444");
+  g.append("text").attr("text-anchor", "end").attr("x", width * 0.95).attr("y", height * 0.2).text(categoryObject[settings.typeValue])
+    .style("font-size", (height / 8) + "px").attr("fill", "#444");
 }
 
 // var dispatch = d3.dispatch('hideTooltip', 'iTooltip');
