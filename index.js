@@ -7,6 +7,9 @@ economyView.height(economyView.width() * 0.2);
 let lineChartView = $('#view3');
 lineChartView.height(lineChartView.width() * 0.5);
 
+let tip1 = d3.select("#tip1");
+let tip2 = d3.select("#tip2");
+
 const colorScheme = [
   d3.interpolateOrRd,
   d3.interpolateBuGn,
@@ -127,6 +130,25 @@ function renderMap() {
   let svg = d3.select("#view1").append("svg")
       .attr("width", width).attr("height", height);
 
+  // shadow def
+  let defs = svg.append("defs");
+  let filter = defs.append("filter")
+    .attr("id", "dropshadow");
+  filter.append("feGaussianBlur")
+    .attr("in", "SourceAlpha")
+    .attr("stdDeviation", 4)
+    .attr("result", "blur");
+  filter.append("feOffset")
+    .attr("in", "blur")
+    .attr("dx", 2)
+    .attr("dy", 2)
+    .attr("result", "offsetBlur");
+  let feMerge = filter.append("feMerge");
+  feMerge.append("feMergeNode")
+    .attr("in", "offsetBlur");
+  feMerge.append("feMergeNode")
+    .attr("in", "SourceGraphic");
+
   let projection = d3.geoMercator()
     .center([107, 31])
     .scale(width * 0.7)
@@ -150,19 +172,39 @@ function renderMap() {
     .enter()
     .append("path")
     .attr("stroke", "#000")
-    .attr("stroke-width", 0.5)
+    .attr("stroke-width", function (d) {
+      if (settings.region === d.properties.name)
+        return 2;
+      else return 0.5;
+    })
     .attr("fill", getRegionColor)
     .attr("d", path)
+    .style("z-index", function (d) {
+      if (settings.region === d.properties.name)
+        return 2;
+      else return 0;
+    })
     .on("mouseover", function (d, i) {
-      d3.select(this)
-        .attr("fill", "yellow");
+      tip1.transition()
+        .duration(500)
+        .style("opacity", .6)
+        .style("font-size", 20);
+      tip1.html(d.properties.name + ": " + densityData[d.properties.name])
+        .style("left", (d3.event.pageX - 60) + "px")
+        .style("top", (d3.event.pageY - 60) + "px");
+    })
+    .on("mousemove", function (d, i) {
+      tip1.html(d.properties.name + ": " + densityData[d.properties.name])
+        .style("left", (d3.event.pageX - 60) + "px")
+        .style("top", (d3.event.pageY - 60) + "px");
     })
     .on("mouseout", function (d, i) {
-      d3.select(this)
-        .attr("fill", getRegionColor(d));
+      tip1.transition()
+        .duration(500)
+        .style("opacity", 0);
     })
     .on("click", function (d, i) {
-      settings.region = d;
+      settings.region = d.properties.name;
       afterUpdateSettings();
     });
 }
@@ -195,23 +237,57 @@ function renderEconomy() {
   y1.domain([0, d3.max(getDataValuesOnType(settings.typeValue))]);
   y2.domain([0, d3.max(getDataValuesOnType("gdp"))]);
 
-  g.append("g").selectAll("rect")
-    .data(data)
-    .enter().append("rect")
-    .attr("fill", color(0.4))
-    .attr("x", function (d) { return x(d.region); })
-    .attr("y", function (d) { return y1(d.val); })
-    .attr("height", function (d) { return y1Max - y1(d.val); })
-    .attr("width", x.bandwidth());
+  function showTooltip (d, i) {
+    tip2.style("font-size", 12)
+      .style("width", "150px")
+      .style("height", "50px");
+    tip2.transition()
+      .duration(50)
+      .style("opacity", .6);
+    tip2.html(d.region + "<br>" + d.val + " / " + Math.round(d.gdp))
+      .style("left", (d3.event.pageX - 60) + "px")
+      .style("top", (d3.event.pageY - 60) + "px");
+  }
+
+  function hideTooltip (d, i) {
+    tip2.transition()
+      .duration(500)
+      .style("opacity", 0);
+  }
 
   g.append("g").selectAll("rect")
     .data(data)
     .enter().append("rect")
-    .attr("fill", color(0.7))
+    .attr("fill", function (d) {
+      return d.region === settings.region ? color(0.2) : color(0.4);
+    })
+    .attr("x", function (d) { return x(d.region); })
+    .attr("y", function (d) { return y1(d.val); })
+    .attr("height", function (d) { return y1Max - y1(d.val); })
+    .attr("width", x.bandwidth())
+    .on("mouseover", showTooltip)
+    .on("mouseout", hideTooltip)
+    .on("click", function (d, i) {
+      settings.region = d.region;
+      afterUpdateSettings();
+    });
+
+  g.append("g").selectAll("rect")
+    .data(data)
+    .enter().append("rect")
+    .attr("fill", function (d) {
+      return d.region === settings.region ? color(1) : color(0.7);
+    })
     .attr("x", function (d) { return x(d.region); })
     .attr("y", height / 2)
     .attr("height", function (d) { return y2(d.gdp); })
-    .attr("width", x.bandwidth());
+    .attr("width", x.bandwidth())
+    .on("mouseover", showTooltip)
+    .on("mouseout", hideTooltip)
+    .on("click", function (d, i) {
+      settings.region = d.region;
+      afterUpdateSettings();
+    });
 
   g.append("text").attr("text-anchor", "end").attr("x", width * 0.95).attr("y", height * 0.8).text("地区生产总值")
     .style("font-size", (height / 8) + "px").attr("fill", "#555");

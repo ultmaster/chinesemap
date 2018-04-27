@@ -41,3 +41,16 @@ footer p {
 }
 
 .box-shadow { box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05); }
+
+.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 130px;
+    height: 40px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 0;
+    color: white;
+    border-radius: 8px;
+    pointer-events: none;
+}
