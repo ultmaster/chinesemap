@@ -52,7 +52,7 @@ function setDefault() {
   settings.typeValue = $("#category").val();
   settings.time = $("#time").val();
   $("#timeDisplayer").html(settings.time);
-  updateSettings();
+  afterUpdateSettings();
 }
 $("#category, #time").on("input", setDefault);
 
@@ -114,7 +114,7 @@ function init() {
   renderLineChart();
 }
 
-function updateSettings() {
+function afterUpdateSettings() {
   renderMap();
   renderEconomy();
   renderLineChart();
@@ -160,6 +160,10 @@ function renderMap() {
     .on("mouseout", function (d, i) {
       d3.select(this)
         .attr("fill", getRegionColor(d));
+    })
+    .on("click", function (d, i) {
+      settings.region = d;
+      afterUpdateSettings();
     });
 }
 
@@ -228,6 +232,20 @@ function renderLineChart() {
   let xAxis = d3.axisBottom(xScale).tickFormat(function (d) { return "" + d; });
   let xAxisWithoutTick = d3.axisBottom(xScale).tickFormat("");
 
+  svg.append("text").attr("class", "text-year")
+    .attr("dx", lineWidth)
+    .attr("dy", height - 10)
+    .attr("text-anchor", "end")
+    .attr("fill", "#777")
+    .attr("opacity", 0.4)
+    .style("font-size", 100)
+    .on("show", function () {
+      let event = d3.event;
+      if (event.detail.hasOwnProperty("year"))
+        d3.select(this).text(event.detail.year);
+      else d3.select(this).text("");
+    });
+
   let lineGroup = svg.append("g").attr("width", lineWidth).attr("height", height);
   const groupType = ["length", "people", "throughput"];
   const busType = ["Bus", "Metro", "Tot"];
@@ -280,7 +298,7 @@ function renderLineChart() {
         else d3.select(this).attr("opacity", 0);
       })
       .on("disappear", function () {
-        d3.select(this).attr("opacity", 0);
+        // d3.select(this).attr("opacity", 0);
       });
     // add axis
     let axisGroup = svg.append("g").attr("transform", "translate(0," + ((i + 1) * (lineHeight + paddingHeight)) + ")");
@@ -323,9 +341,6 @@ function renderLineChart() {
     }
   });
 
-  // console.log(
-
-
   // build interactive layer
   let interactiveWrap = svg.append('g');
   let interactiveLineWrap = interactiveWrap.append('g').attr('opacity', 0);
@@ -350,6 +365,11 @@ function renderLineChart() {
         }
       });
       d3.selectAll(".label-group").dispatch("show", {
+        detail: {
+          year: idx + 2007
+        }
+      });
+      d3.selectAll(".text-year").dispatch("show", {
         detail: {
           year: idx + 2007
         }
